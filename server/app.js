@@ -5,14 +5,14 @@ const connectDB = require("./config/mongoose-connection");
 const userRouter = require("./routes/userRouter");
 const aiRouter=require("./routes/aiRouter")
 const cookieParser = require("cookie-parser");
-
+require('dotenv').config(); 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite runs here
+  origin: 'http://localhost:5173',
   credentials: true
 }));
 

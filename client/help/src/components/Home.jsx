@@ -1,140 +1,316 @@
 import axios from "axios";
-import React, { useState } from "react";
-import { useEffect } from "react";
-
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { marked } from "marked";
+import Loader from "./Loader";
 function Home() {
+  const navigate = useNavigate();
+  const [user, setuser] = useState({});
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
-  const [AllConversation, setAllConversation] = useState([])
+  const [AllConversation, setAllConversation] = useState([]);
+  const [ligthMode, setLigthMode] = useState(false);
+  const [newChatTitle, setNewChatTitle] = useState("");
+  const [showTitleInput, setShowTitleInput] = useState(false);
+  const [isLoading, setisLoading] = useState(false)
 
- useEffect(() => {
-  const fetchAllConversations = async () => {
-    try {
-      const response = await axios.get("http://localhost:3000/ai/allconversations", {
-        withCredentials: true,
-      });
-      console.log("Fetched conversations:", response.data.data);
-      setAllConversation(response.data.data); // only the actual array
-    } catch (error) {
-      console.log("Error in frontend fetching all conversations:", error);
-    }
-  };
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        let res = await axios.get("http://localhost:3000/users/verify", {
+          withCredentials: true,
+        });
+        if (!res.data.success) {
+          navigate("/login");
+        }
+      } catch (error) {
+        console.error("user is not authenticated", error);
+        navigate("/login");
+      }
+    };
+    checkAuth();
+  }, []);
 
-  fetchAllConversations();
-}, []);
+  useEffect(() => {
+    const fetchAllConversations = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/ai/allconversations",
+          {
+            withCredentials: true,
+          }
+        );
+        setAllConversation(response.data.data);
+        console.log(response.data.data);
+        // console.log(response.data.user);
+        setuser(response.data.user);
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+      }
+    };
 
-  
+    fetchAllConversations();
+  }, []);
 
   const handleAskQuestion = async () => {
+    if (!message.trim()) return;
+    setMessages((prev) => [...prev, { sender: "user", content: message }]);
+    setMessage("");
+    setisLoading(true)
     try {
-      setMessages((prev) => [...prev, { type: "user", text: message }]);
-      setMessage(""); 
-      const res = await axios.post("http://localhost:3000/ai/gemini", { content: message, conversationId: conversationId || null },{
-        withCredentials: true,
-      });
-
+      const res = await axios.post(
+        "http://localhost:3000/ai/gemini",
+        {
+          content: message,
+          conversationId: conversationId || null,
+          title: newChatTitle || "new chat",
+        },
+        { withCredentials: true }
+      );
+      
       if (res.data.conversationId && !conversationId) {
         setConversationId(res.data.conversationId);
       }
-
+      
+      let parsedMessage = marked.parse(res.data.message);
+      console.log("parced messages in askQuestion function :", parsedMessage);
+      
       setMessages((prev) => [
         ...prev,
-        { type: "gemini", text: res.data.message },
+        { sender: "gemini", content: parsedMessage },
       ]);
-      // console.log(messages);
     } catch (error) {
-      console.log("error in frontend",error);
-      if (error.response) {
-        console.log(error.response.data.message);
-      }
+      console.error("Error in frontend:", error);
+    }finally{
+
+      setisLoading(false)
     }
   };
 
-  const handleOnkeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleAskQuestion();
-    }
+  const handleOnKeyDown = (e) => {
+    if (e.key === "Enter") handleAskQuestion();
   };
 
-  const handleLogout=async()=>{
+  const handleLogout = async () => {
     try {
-      let res=await axios.get("http://localhost:3000/auth/logout",null,{withCredentials:true});
-      alert(res.message)
-      //navigate to login page
+      await axios.get("http://localhost:3000/users/logout", {
+        withCredentials: true,
+      });
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error.message);
+    }
+  };
+
+  const changeMode = () => {
+    setLigthMode((prev) => !prev);
+  };
+
+  const handleDeleteConversation = async (index) => {
+    const DeletingId = AllConversation[index]._id;
+    console.log(DeletingId);
+
+    try {
+      let res = await axios.delete(
+        `http://localhost:3000/ai/deleteConversation/${DeletingId}`,
+        { withCredentials: true }
+      );
+      if (res.data.message === "success") {
+        let filteredConversations = AllConversation.filter(
+          (_, i) => i !== index
+        );
+        setAllConversation(filteredConversations);
+        alert("Conversation Deleted succsessfully!!");
+      }
     } catch (error) {
       console.log(error.message);
+      alert("Error in Deleting the conversation!!");
     }
-  }
+  };
+
+  //handle new chat
+  const handleNewchat = () => {
+    setShowTitleInput((prev) => !prev);
+  };
+
+  const handleShowConversation = async (index) => {
+    const conversationId = AllConversation[index]._id;
+    try {
+      let response = await axios.get(
+        `http://localhost:3000/ai/showconversation/${conversationId}`,
+        { withCredentials: true }
+      );
+
+      const rawMessages = response.data.messages;
+
+      // Parse markdown only for gemini messages
+      const parsedMessages = rawMessages.map((msg) => {
+        return {
+          ...msg,
+          text: msg.type === "gemini" ? marked.parse(msg.text || "") : msg.text,
+        };
+      });
+
+      console.log("parced message", parsedMessages);
+      setMessages(parsedMessages);
+
+      setConversationId(conversationId); // Set current conversation ID
+    } catch (error) {
+      console.log(error);
+      alert("Failed to load conversation");
+    }
+  };
+  const handleStartnewChat = () => {
+    setShowTitleInput(false);
+    navigate("/");
+  };
 
   return (
-    <div className="h-screen w-full flex">
-      <div className="bg-zinc-900 w-1/4 h-full flex flex-col justify-between">
-        <div className="p-2 flex gap-3 justify-center items-center mt-3">
-          <img className="h-8" src="brain.png" alt="" />
-          <span className="font-bold text-gray-400 "><h4>Man-Seek</h4></span>
+    <div className="h-screen w-full flex  font-sans">
+      {/* Sidebar */}
+      <div
+        className={`${ligthMode ? "bg-gray-200" : "bg-zinc-900"} ${
+          ligthMode ? "text-black" : "text-white"
+        } w-1/4 h-full flex flex-col justify-between border-r border-zinc-700`}
+      >
+        <div className="p-4 flex items-center gap-3 border-b border-zinc-700">
+          <img className="h-8 " src="brain.png" alt="logo" />
+          <h4 className="font-bold ">Man-Seek</h4>
         </div>
-        <div className="bg-zinc-800 h-full p-2 overflow-y-auto scrollbar-thin-y">
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
-         <p className="text-sm bg-zinc-900 text-gray-400 rounded p-1 mt-2 cursor-pointer">New chat 1</p>
+
+        <div
+          className={`${
+            ligthMode ? "bg-gray-200" : "bg-zinc-800"
+          } flex-1 p-2 overflow-y-auto scrollbar-thin`}
+        >
+          {AllConversation.map((item, index) => (
+            <p
+              onClick={() => handleShowConversation(index)}
+              key={index}
+              className={`text-sm  ${
+                ligthMode ? "bg-gray-200" : "bg-zinc-900"
+              } flex justify-between rounded p-2 mt-2 ${
+                ligthMode ? "hover:bg-gray-300" : "hover: bg-zinc-700"
+              } cursor-pointer truncate`}
+            >
+              {item.title || `Conversation ${index + 1}`}{" "}
+              <i
+                onClick={() => handleDeleteConversation(index)}
+                className="fa  fa-trash-o hover:text-red-500 fa-lg"
+                aria-hidden="true"
+              ></i>
+            </p>
+          ))}
         </div>
-        <div className="flex flex-col justify-center items-center gap-3 mb-2 p-2">
-          <div className="flex justify-center items-center">
-          <img className="h-8" src="default.png" alt="" />
-          <p className="text-gray-400">farukh patel</p>
+
+        <div className="p-4  flex flex-col items-center gap-3 border-t border-zinc-700">
+          <div className="flex items-center gap-2">
+            <img className="h-8 rounded-full" src="default.png" alt="User" />
+            <p className="font-bold">{user.fullname}</p>
           </div>
-            <button onClick={handleLogout} className="text-red-500 text-sm cursor-pointer"><i className="fa fa-sign-out text-white mr-2" aria-hidden="true"></i>Logout</button>
+          <button
+            onClick={handleLogout}
+            className="text-red-500 cursor-pointer text-sm hover:underline"
+          >
+            <i className="fa fa-sign-out  mr-2" /> Logout
+          </button>
         </div>
       </div>
-      <div className="bg-zinc-800 h-full w-full flex flex-col p-2 overflow-y-auto">
-        <div className="bg-zinc-800 h-12 flex justify-between">
-          <div className="flex justify-center items-center border-1 border-zinc-800 hover:border-blue-500 text-white w-25 gap-2 cursor-pointer text-sm rounded-md"><i className="fa fa-pencil-square-o" aria-hidden="true"></i>New Chat</div>
-          <button className="p-2 cursor-pointer border-1 border-zinc-800 text-sm hover:border-blue-500 text-white rounded-md"> <i className="fa fa-sun-o " aria-hidden="true"></i> Light Mode</button>
+
+      {/* Main chat area */}
+      <div
+        className={`${ligthMode ? "bg-gray-200" : "bg-zinc-900"} ${
+          ligthMode ? "text-black" : "text-white"
+        }   w-full flex flex-col`}
+      >
+        {/* Top Bar */}
+        <div className="h-16 px-4 flex items-center justify-between border-b border-zinc-700">
+          <button
+            onClick={handleNewchat}
+            className="text-sm flex items-center gap-2 px-3 py-1 border border-zinc-700 cursor-pointer rounded hover:border-blue-500"
+          >
+            <i className="fa fa-pencil-square-o hover:text-blue-500" /> New Chat
+          </button>
+          {showTitleInput && (
+            <div className="flex items-center gap-2 mt-2 mr-130">
+              <input
+                type="text"
+                placeholder="Enter chat title"
+                className="px-2 py-1 border border-zinc-700 rounded "
+                value={newChatTitle}
+                onChange={(e) => setNewChatTitle(e.target.value)}
+              />
+              <button
+                onClick={handleStartnewChat}
+                className="px-3 py-1 text-sm border hover:border-blue-500 rounded  border-zinc-700"
+              >
+                Start
+              </button>
+            </div>
+          )}
+          <button
+            onClick={changeMode}
+            className="text-sm flex items-center gap-2 px-3 py-1 border border-zinc-700  cursor-pointer rounded hover:border-blue-500"
+          >
+            <i className={`fa ${ligthMode ? "fa-moon-o" : "fa-sun-o"}`} />
+            {ligthMode ? "Dark Mode" : "Ligth Mode"}
+          </button>
         </div>
-        <div className="messageDiv bg-zinc-800 h-100 w-full overflow-y-auto p-4 ">
+
+        {/* Messages */}
+        <div className="flex-1  overflow-y-auto p-4 space-y-4">
+          
           {messages.map((msg, index) => (
             <div
-            key={index}
-            className={`flex w-full p-2 mt-2 ${msg.type === "user" ? "justify-end" : "justify-start"}` }
+              key={index}
+              className={`flex ${
+                msg.sender === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div
-                className={ "bg-green-400 w-fit max-w-1/2 mt-2 p-1  text-xs rounded-md"}
+                className={` p-3 text-sm max-w-lg relative ${
+                  msg.sender === "user"
+                    ? "bg-blue-600 text-white rounded-[10px] rounded-br-none"
+                    : "bg-green-500 text-black rounded-[10px] rounded-bl-none"
+                }`}
               >
-                <span className="text-blue-900 font-bold text-xs ">
-                  {msg.type === "user" ? "@you" : "@gemini"}
+                <span className="font-bold text-xs block mb-1">
+                  {msg.sender === "user" ? "@you" : "@gemini"}
                 </span>
-                <br />
-                {msg.text}
-                <br />
-                <div className="w-full flex justify-end h-auto">
-
-                <span className="text-gray-600 text-[10px] mt-2">09:12 pm</span>
-                </div>
-
+                <div dangerouslySetInnerHTML={{ __html: msg.content }} />
+                <div className="text-[12px] text-right text-zinc-900 mt-1">
+                  {new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </div> 
               </div>
             </div>
           ))}
         </div>
-        <div className="bg-zinc-980 flex justify-center h-30 items-end ">
-          <div className="w-135 h-15 rounded-md bg-zinc-900 mb-8 p-3 shadow-lg shadow-gray-900 flex">
+        
+          {isLoading && (
+            <div className="flex p-3 justify-start">
+            <Loader/>
+            </div>
+          )}
+      
+
+        {/* Input */}
+        <div className="p-4 border-t border-zinc-700">
+          <div className="flex items-center border-1 border-zinc-700 rounded-md px-4 py-2">
             <input
-            onKeyDown={handleOnkeyDown}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleOnKeyDown}
               type="text"
               placeholder="Ask Anything!"
-              className="border-b border-gray-200 text-white text-md focus:border-blue-500 outline-none w-full p-2"
+              className=" outline-none flex-1 placeholder-gray-400"
             />
-            <button  onClick={handleAskQuestion}>
-              <i
-                className="fa fa-arrow-circle-right fa-lg text-white cursor-pointer ml-5"
-                aria-hidden="true"
-              ></i>
+            <button onClick={handleAskQuestion}>
+              <i className="fa fa-paper-plane cursor-pointer fa-lg  hover:text-blue-500 ml-4" />
             </button>
           </div>
         </div>
@@ -144,3 +320,4 @@ function Home() {
 }
 
 export default Home;
+ 

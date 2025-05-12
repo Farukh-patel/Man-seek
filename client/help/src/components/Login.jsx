@@ -3,6 +3,7 @@ import React from "react";
 import { useState } from "react";
 import {useNavigate} from "react-router-dom"
 function Login() {
+  const navigate=useNavigate()
   const [formData, setformData] = useState({
     email: "",
     password: "",
@@ -13,7 +14,6 @@ function Login() {
   };
   
   const handleOnsubmit = async (e) => {
-    const navigate=useNavigate()
     e.preventDefault();
     try {
       const res = await axios.post("http://localhost:3000/users/auth/login",formData,
@@ -24,7 +24,8 @@ function Login() {
       setformData("")
       navigate("/")
     } catch (error) {
-      alert(error.response.data.message);
+      console.log(error);
+      ;
     }
   };
 
@@ -37,7 +38,7 @@ function Login() {
         <form onSubmit={handleOnsubmit} className="flex flex-col gap-4">
           {/* Email */}
           <div className="relative">
-            <i className="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <i className="fas fa-envelope absolute left-3  top-1/2 transform -translate-y-1/2 text-gray-400"></i>
             <input
               onChange={handleOnchange}
               name="email"

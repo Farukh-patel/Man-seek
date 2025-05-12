@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import axios from "axios";
+import {useNavigate} from "react-router-dom"
 // import "@fortawesome/fontawesome-free/css/all.min.css";
 
 function Signup() {
+    const navigate=useNavigate()
   const [formData, setFormData] = useState({
     fullname: "",
     email: "",
@@ -19,6 +21,7 @@ function Signup() {
       const res = await axios.post("http://localhost:3000/users/auth/signup",formData,{ withCredentials: true } );
       console.log(res.data.message);
       //navigate to homepage
+      navigate("/")
     } catch (error) {
       alert(error.response?.data?.error || "Signup failed");
       console.log(error.message);
