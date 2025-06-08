@@ -13,7 +13,7 @@ function Home() {
   const [ligthMode, setLigthMode] = useState(false);
   const [newChatTitle, setNewChatTitle] = useState("");
   const [showTitleInput, setShowTitleInput] = useState(false);
-  const [isLoading, setisLoading] = useState(false)
+  const [isLoading, setisLoading] = useState(false); 
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -42,7 +42,7 @@ function Home() {
           }
         );
         setAllConversation(response.data.data);
-        console.log(response.data.data);
+        // console.log(response.data.data);
         // console.log(response.data.user);
         setuser(response.data.user);
       } catch (error) {
@@ -51,7 +51,7 @@ function Home() {
     };
 
     fetchAllConversations();
-  }, []);
+  }, [messages]);
 
   const handleAskQuestion = async () => {
     if (!message.trim()) return;
@@ -83,7 +83,6 @@ function Home() {
     } catch (error) {
       console.error("Error in frontend:", error);
     }finally{
-
       setisLoading(false)
     }
   };
@@ -161,10 +160,12 @@ function Home() {
       alert("Failed to load conversation");
     }
   };
-  const handleStartnewChat = () => {
-    setShowTitleInput(false);
-    navigate("/");
-  };
+const handleStartnewChat = () => {
+  setMessages([]);
+  setConversationId(null);
+  setShowTitleInput(false);
+};
+
 
   return (
     <div className="h-screen w-full flex  font-sans">
@@ -233,7 +234,7 @@ function Home() {
             <i className="fa fa-pencil-square-o hover:text-blue-500" /> New Chat
           </button>
           {showTitleInput && (
-            <div className="flex items-center gap-2 mt-2 mr-130">
+            <div className="flex items-center gap-2 mb-2 mt-2 mr-130">
               <input
                 type="text"
                 placeholder="Enter chat title"

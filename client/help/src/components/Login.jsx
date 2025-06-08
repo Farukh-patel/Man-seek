@@ -25,7 +25,7 @@ function Login() {
       navigate("/")
     } catch (error) {
       console.log(error);
-      ;
+      alert(error.response.data);
     }
   };
 
