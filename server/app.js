@@ -15,25 +15,24 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: true,       // allow whatever origin the browser requested
-    credentials: true
+    origin: "http://localhost:5173",
+    credentials: true,
   })
 );
-
 
 // Routes
 app.use("/users", userRouter);
 app.use("/ai", aiRouter);
 
-// Check for frontend build in production
-if (process.env.NODE_ENV === "production") {
-  const buildPath = path.join(__dirname, "../client/dist"); // ✅ Vite uses "dist"
-  app.use(express.static(buildPath));
+// // Check for frontend build in production
+// if (process.env.NODE_ENV === "production") {
+//   const buildPath = path.join(__dirname, "../client/dist"); // ✅ Vite uses "dist"
+//   app.use(express.static(buildPath));
 
-  app.get("*", (req, res) => {
-    res.sendFile(path.resolve(buildPath, "index.html"));
-  });
-}
+//   app.get("*", (req, res) => {
+//     res.sendFile(path.resolve(buildPath, "index.html"));
+//   });
+// }
 
 // Default route
 app.get("/", (req, res) => {
