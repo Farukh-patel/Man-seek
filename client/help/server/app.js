@@ -24,20 +24,6 @@ app.get("/", (req, res) => {
   res.send("hey ~");
 });
 
-const path = require('path');
-
-// Serve frontend only in production
-if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '../client/help/build');
-  app.use(express.static(buildPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(buildPath, 'index.html'));
-  });
-}
-
-
-
 // Connect to DB then start the server
 connectDB().then(() => {
   app.listen(3000, () => {
