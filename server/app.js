@@ -15,10 +15,11 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
-    credentials: true,
+    origin: true,       // allow whatever origin the browser requested
+    credentials: true
   })
 );
+
 
 // Routes
 app.use("/users", userRouter);
