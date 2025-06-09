@@ -24,17 +24,19 @@ app.get("/", (req, res) => {
   res.send("hey ~");
 });
 
-const path = require('path');
+const fs = require("fs");
+const path=require("path")
+const buildPath = path.join(__dirname, "../client/build");
 
-// Serve frontend only in production
-if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '../client/help/build');
+if (fs.existsSync(buildPath)) {
   app.use(express.static(buildPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(buildPath, 'index.html'));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(buildPath, "index.html"));
   });
+} else {
+  console.log("⚠️ Build path not found:", buildPath);
 }
+
 
 
 
