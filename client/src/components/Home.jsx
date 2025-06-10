@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { marked } from "marked";
 import Loader from "./Loader";
+
 function Home() {
   const navigate = useNavigate();
   const [user, setuser] = useState({});
@@ -13,12 +14,14 @@ function Home() {
   const [ligthMode, setLigthMode] = useState(false);
   const [newChatTitle, setNewChatTitle] = useState("");
   const [showTitleInput, setShowTitleInput] = useState(false);
-  const [isLoading, setisLoading] = useState(false)
+  const [isLoading, setisLoading] = useState(false);
+
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        let res = await axios.get("http://localhost:3000/users/verify", {
+        let res = await axios.get(`${BACKEND_URL}/users/verify`, {
           withCredentials: true,
         });
         if (!res.data.success) {
@@ -35,15 +38,10 @@ function Home() {
   useEffect(() => {
     const fetchAllConversations = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:3000/ai/allconversations",
-          {
-            withCredentials: true,
-          }
-        );
+        const response = await axios.get(`${BACKEND_URL}/ai/allconversations`, {
+          withCredentials: true,
+        });
         setAllConversation(response.data.data);
-        console.log(response.data.data);
-        // console.log(response.data.user);
         setuser(response.data.user);
       } catch (error) {
         console.error("Error fetching conversations:", error);
@@ -57,10 +55,10 @@ function Home() {
     if (!message.trim()) return;
     setMessages((prev) => [...prev, { sender: "user", content: message }]);
     setMessage("");
-    setisLoading(true)
+    setisLoading(true);
     try {
       const res = await axios.post(
-        "http://localhost:3000/ai/gemini",
+        `${BACKEND_URL}/ai/gemini`,
         {
           content: message,
           conversationId: conversationId || null,
@@ -68,23 +66,21 @@ function Home() {
         },
         { withCredentials: true }
       );
-      
+
       if (res.data.conversationId && !conversationId) {
         setConversationId(res.data.conversationId);
       }
-      
+
       let parsedMessage = marked.parse(res.data.message);
-      console.log("parced messages in askQuestion function :", parsedMessage);
-      
+
       setMessages((prev) => [
         ...prev,
         { sender: "gemini", content: parsedMessage },
       ]);
     } catch (error) {
       console.error("Error in frontend:", error);
-    }finally{
-
-      setisLoading(false)
+    } finally {
+      setisLoading(false);
     }
   };
 
@@ -94,7 +90,7 @@ function Home() {
 
   const handleLogout = async () => {
     try {
-      await axios.get("http://localhost:3000/users/logout", {
+      await axios.get(`${BACKEND_URL}/users/logout`, {
         withCredentials: true,
       });
       navigate("/login");
@@ -109,11 +105,9 @@ function Home() {
 
   const handleDeleteConversation = async (index) => {
     const DeletingId = AllConversation[index]._id;
-    console.log(DeletingId);
-
     try {
       let res = await axios.delete(
-        `http://localhost:3000/ai/deleteConversation/${DeletingId}`,
+        `${BACKEND_URL}/ai/deleteConversation/${DeletingId}`,
         { withCredentials: true }
       );
       if (res.data.message === "success") {
@@ -121,7 +115,7 @@ function Home() {
           (_, i) => i !== index
         );
         setAllConversation(filteredConversations);
-        alert("Conversation Deleted succsessfully!!");
+        alert("Conversation Deleted successfully!!");
       }
     } catch (error) {
       console.log(error.message);
@@ -129,7 +123,6 @@ function Home() {
     }
   };
 
-  //handle new chat
   const handleNewchat = () => {
     setShowTitleInput((prev) => !prev);
   };
@@ -138,13 +131,12 @@ function Home() {
     const conversationId = AllConversation[index]._id;
     try {
       let response = await axios.get(
-        `http://localhost:3000/ai/showconversation/${conversationId}`,
+        `${BACKEND_URL}/ai/showconversation/${conversationId}`,
         { withCredentials: true }
       );
 
       const rawMessages = response.data.messages;
 
-      // Parse markdown only for gemini messages
       const parsedMessages = rawMessages.map((msg) => {
         return {
           ...msg,
@@ -152,15 +144,14 @@ function Home() {
         };
       });
 
-      console.log("parced message", parsedMessages);
       setMessages(parsedMessages);
-
-      setConversationId(conversationId); // Set current conversation ID
+      setConversationId(conversationId);
     } catch (error) {
       console.log(error);
       alert("Failed to load conversation");
     }
   };
+
   const handleStartnewChat = () => {
     setShowTitleInput(false);
     navigate("/");

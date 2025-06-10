@@ -1,31 +1,31 @@
 import axios from "axios";
-import React from "react";
-import { useState } from "react";
-import {useNavigate} from "react-router-dom"
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 function Login() {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
   const [formData, setformData] = useState({
     email: "",
     password: "",
   });
-  
+
   const handleOnchange = (e) => {
     setformData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
-  
+
   const handleOnsubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:3000/users/auth/login",formData,
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/users/auth/login`,
+        formData,
         { withCredentials: true }
       );
-      // alert(res.data.message);
       console.log(res);
-      setformData("")
-      navigate("/")
+      setformData({ email: "", password: "" }); // fixed reset
+      navigate("/");
     } catch (error) {
-      console.log(error);
-      ;
+      console.log("Login error:", error);
     }
   };
 
@@ -65,11 +65,11 @@ function Login() {
           {/* Submit Button */}
           <input
             type="submit"
-            value="Signup"
+            value="Login"
             className="bg-green-600 hover:bg-green-700 transition p-2 rounded-md cursor-pointer text-zinc-200 font-semibold"
           />
 
-          {/* Link to Login */}
+          {/* Link to Signup */}
           <div className="text-center mt-2">
             <a className="text-zinc-400" href="/signup">
               Don't have an account?{" "}
